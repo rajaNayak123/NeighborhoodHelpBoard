@@ -1,6 +1,4 @@
-// backend/src/config/socket.js
-
-const { Server } = require('socket.io');
+import { Server } from 'socket.io';
 
 let io;
 
@@ -47,4 +45,4 @@ const getIO = () => {
   return io;
 };
 
-module.exports = { initSocket, getIO };
+export { initSocket, getIO };
