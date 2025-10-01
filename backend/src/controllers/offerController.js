@@ -1,6 +1,6 @@
 import { Offer } from "../models/Offer.js";
 import { Request } from "../models/Request.js";
-import Notification from "../models/Notification.js";
+import { Notification } from "../models/Notification.js";
 import { getIO } from "../config/socket.js";
 
 const createOffer = async (req, res) => {
@@ -53,11 +53,10 @@ const createOffer = async (req, res) => {
   } catch (error) {
     next(error);
     const errorMessage = error.message || "Error while creating offer";
-    console.log(errorMessage);
   }
 };
 
-const getOffersForRequest = async (req, res) => {
+const getOffersForRequest = async (req, res, next) => {
   try {
     const request = await Request.findById(req.params.requestId);
     if (!request) {
@@ -65,11 +64,9 @@ const getOffersForRequest = async (req, res) => {
       throw new Error("Request not found");
     }
 
-    // Ensure only the requester can see the offers
-    if (request.createdBy.toString() !== req.user._id.toString()) {
-      res.status(403);
-      throw new Error("You are not authorized to view offers for this request");
-    }
+    // Allow any authenticated user to view offers for a request
+    // This helps users see if someone has already offered to help
+    // The requester can still manage/respond to offers through other endpoints
 
     const offers = await Offer.find({ request: req.params.requestId }).populate(
       "offeredBy",
@@ -78,77 +75,70 @@ const getOffersForRequest = async (req, res) => {
 
     res.status(200).json(offers);
   } catch (error) {
-    next(error);
     const errorMessage =
       error.message || "Error while fetching offers by request";
-    console.log(errorMessage);
-  }
-};
-
-const respondToOffer = async (req, res) => {
-
-try {
-      const { status } = req.body; // 'accepted' or 'rejected'
-      const offer = await Offer.findById(req.params.offerId);
-    
-      if (!offer) {
-        res.status(404);
-        throw new Error("Offer not found");
-      }
-    
-      // Ensure the logged-in user is the requester
-      if (offer.requester.toString() !== req.user._id.toString()) {
-        res.status(403);
-        throw new Error("You are not authorized to respond to this offer");
-      }
-    
-      offer.status = status;
-      await offer.save();
-    
-      if (status === "accepted") {
-        // Update the request status and assign the helper
-        const request = await Request.findByIdAndUpdate(offer.request, {
-          status: "in-progress",
-          helper: offer.offeredBy,
-        });
-    
-        // Reject all other pending offers for this request
-        await Offer.updateMany(
-          { request: offer.request, status: "pending" },
-          { status: "rejected" }
-        );
-    
-        // Notify the accepted helper
-        const notification = await Notification.create({
-          user: offer.offeredBy,
-          message: `Your offer for "${request.title}" has been accepted!`,
-          link: `/requests/${request._id}`,
-        });
-        getIO()
-          .to(offer.offeredBy.toString())
-          .emit("receiveNotification", notification);
-      } else {
-        // Notify the rejected helper
-        const request = await Request.findById(offer.request);
-        const notification = await Notification.create({
-          user: offer.offeredBy,
-          message: `Your offer for "${request.title}" was not accepted.`,
-          link: `/requests/${request._id}`,
-        });
-        getIO()
-          .to(offer.offeredBy.toString())
-          .emit("receiveNotification", notification);
-      }
-      res.status(200).json(offer);
-} catch (error) {
     next(error);
-    const errorMessage = error.message || "Error while responding to offer";
-    console.log(errorMessage);
   }
 };
-    
-export { 
-  createOffer, 
-  getOffersForRequest, 
-  respondToOffer 
+
+const respondToOffer = async (req, res, next) => {
+  try {
+    const { status } = req.body; // 'accepted' or 'rejected'
+    const offer = await Offer.findById(req.params.offerId);
+
+    if (!offer) {
+      res.status(404);
+      throw new Error("Offer not found");
+    }
+
+    // Ensure the logged-in user is the requester
+    if (offer.requester.toString() !== req.user._id.toString()) {
+      res.status(403);
+      throw new Error("You are not authorized to respond to this offer");
+    }
+
+    offer.status = status;
+    await offer.save();
+
+    if (status === "accepted") {
+      // Update the request status and assign the helper
+      const request = await Request.findByIdAndUpdate(offer.request, {
+        status: "in-progress",
+        helper: offer.offeredBy,
+      });
+
+      // Reject all other pending offers for this request
+      await Offer.updateMany(
+        { request: offer.request, status: "pending" },
+        { status: "rejected" }
+      );
+
+      // Notify the accepted helper
+      const notification = await Notification.create({
+        user: offer.offeredBy,
+        message: `Your offer for "${request.title}" has been accepted!`,
+        link: `/requests/${request._id}`,
+      });
+      getIO()
+        .to(offer.offeredBy.toString())
+        .emit("receiveNotification", notification);
+    } else {
+      // Notify the rejected helper
+      const request = await Request.findById(offer.request);
+      const notification = await Notification.create({
+        user: offer.offeredBy,
+        message: `Your offer for "${request.title}" was not accepted.`,
+        link: `/requests/${request._id}`,
+      });
+      getIO()
+        .to(offer.offeredBy.toString())
+        .emit("receiveNotification", notification);
+    }
+    res.status(200).json(offer);
+  } catch (error) {
+    const errorMessage = error.message || "Error while responding to offer";
+    next(error);
+  }
 };
+
+export { createOffer, getOffersForRequest, respondToOffer };
