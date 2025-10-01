@@ -3,8 +3,8 @@ import {
     createOffer,
     getOffersForRequest,
     respondToOffer,
-} from '../controllers/offerController';
-import { protect } from '../middleware/authMiddleware';
+} from '../controllers/offerController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 

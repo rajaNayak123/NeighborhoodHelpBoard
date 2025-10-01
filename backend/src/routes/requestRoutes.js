@@ -6,8 +6,8 @@ import {
   updateRequest,
   deleteRequest,
 } from '../controllers/requestController.js';
-import { protect } from'../middleware/authMiddleware.js';
-import upload from'../config/cloudinary.js';
+import { protect } from '../middleware/authMiddleware.js';
+import upload from '../config/cloudinary.js';
 
 const router = express.Router();
 
