@@ -50,7 +50,7 @@ router.get(
     });
 
     // Redirect to the frontend dashboard
-    res.redirect("https://neighborhood-help-board.vercel.app/dashboard");
+    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
   }
 );
 

@@ -8,7 +8,7 @@ const userSockets = new Map();
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: ["http://localhost:5173", "https://neighborhood-help-board.vercel.app/"],
+      origin: ["http://localhost:5173", process.env.FRONTEND_URL],
       methods: ["GET", "POST"],
       credentials: true,
     },

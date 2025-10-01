@@ -1,7 +1,6 @@
-// frontend/src/context/NotificationContext.jsx
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { useSocket } from './SocketContext';
-import notificationService from '../services/notificationService'; // We'll create this next
+import notificationService from '../services/notificationService';
 
 const NotificationContext = createContext();
 
@@ -12,22 +11,48 @@ export const NotificationProvider = ({ children }) => {
     const socket = useSocket();
 
     useEffect(() => {
-        if(socket) {
-            socket.on('receiveNotification', (newNotification) => {
+        const fetchNotifications = async () => {
+            try {
+                const { data } = await notificationService.getNotifications();
+                setNotifications(data);
+            } catch (error) {
+                console.error("Failed to fetch notifications:", error);
+            }
+        };
+
+        fetchNotifications();
+    }, []);
+
+    useEffect(() => {
+        if (socket) {
+            const handleReceiveNotification = (newNotification) => {
                 setNotifications(prev => [newNotification, ...prev]);
-            });
+            };
+
+            socket.on('receiveNotification', handleReceiveNotification);
 
             return () => {
-                socket.off('receiveNotification');
-            }
+                socket.off('receiveNotification', handleReceiveNotification);
+            };
         }
     }, [socket]);
+
+    const markAsRead = useCallback(async (notificationId) => {
+        try {
+            await notificationService.markAsRead(notificationId);
+            setNotifications(prev =>
+                prev.map(n => (n._id === notificationId ? { ...n, isRead: true } : n))
+            );
+        } catch (error) {
+            console.error("Failed to mark notification as read:", error);
+        }
+    }, []);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <NotificationContext.Provider value={{ notifications, unreadCount }}>
+        <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead }}>
             {children}
         </NotificationContext.Provider>
-    )
-}
+    );
+};
