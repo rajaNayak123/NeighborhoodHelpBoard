@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { User } from "../models/User";
-import { generateAccessToken, generateRefreshToken } from "../utils/token";
-import { sendEmail } from "../utils/sendEmail";
+import { User } from "../models/User.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import { sendEmail } from "../utils/email.js";
 
 const register = async (req, res, next) => {
   const { name, email, password } = req.body;
@@ -101,29 +101,93 @@ const forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    // Change this URL to your frontend's reset password page
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/resetpassword/${resetToken}`;
+    // Create reset URL pointing to frontend
+    const resetURL = `${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }/reset-password/${resetToken}`;
 
-    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a PUT request to: \n\n ${resetURL}`;
+    const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please click the link below to reset your password: \n\n ${resetURL} \n\n This link will expire in 10 minutes.`;
 
-    await sendEmail({
-      email: user.email,
-      subject: "Password reset token",
-      message,
-    });
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Password reset token",
+        message,
+      });
 
-    res.status(200).json({ success: true, data: "Email sent" });
-  } catch (error) {
-    // Clear tokens on error
-    if (user) {
+      res.status(200).json({
+        success: true,
+        message: "Password reset email sent successfully",
+      });
+    } catch (emailError) {
+      // Clear tokens if email sending fails
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
+
+      console.error("Email sending failed:", emailError);
+      throw new Error("Failed to send reset email. Please try again.");
     }
+  } catch (error) {
     next(error);
   }
 };
 
-export { register, login, getMe, forgotPassword };
+const resetPassword = async (req, res, next) => {
+  try {
+    // Get hashed token from URL
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.resetToken)
+      .digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      res.status(400);
+      throw new Error("Token is invalid or has expired");
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset successful",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const logout = async (req, res, next) => {
+  try {
+    // Clear both httpOnly cookies
+    res.cookie("accessToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0, // Expire immediately
+    });
+
+    res.cookie("refreshToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0, // Expire immediately
+    });
+
+    res.json({ success: true, message: "Logged out successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { register, login, getMe, forgotPassword, resetPassword, logout };
