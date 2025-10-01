@@ -6,17 +6,12 @@ const Chat = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  // Data is expected to be passed via <Link state={{...}} />
   const { request } = location.state || {};
 
   if (!request) {
-    // If someone navigates here directly without state, redirect them
     return <Navigate to="/dashboard" />;
   }
 
-  // Determine who the other person in the chat is
-  // If current user is the requester, recipient is the helper
-  // If current user is the helper, recipient is the requester
   const recipient =
     user._id === request.createdBy._id ? request.helper : request.createdBy;
 
