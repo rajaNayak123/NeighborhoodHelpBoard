@@ -7,15 +7,20 @@ import {
   login,
   getMe,
   forgotPassword,
-} from "../controllers/authController";
-import { generateAccessToken, generateRefreshToken } from "../utils/token";
-import { protect } from "../middleware/authMiddleware";
+  resetPassword,
+  logout,
+} from "../controllers/authController.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import { protect } from "../middleware/authMiddleware.js";
+
 
 const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/logout", logout);
 router.post("/forgotpassword", forgotPassword);
+router.put("/resetpassword/:resetToken", resetPassword);
 router.get("/me", protect, getMe);
 
 // Google OAuth Routes
