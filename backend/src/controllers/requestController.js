@@ -4,20 +4,33 @@ const createRequest = async (req, res, next) => {
   try {
     const { title, description, category, urgency, location, address } =
       req.body;
-    const coordinates = JSON.parse(location); // Expecting [longitude, latitude]
+    let coordinates;
+    try {
+      coordinates = JSON.parse(location); // Expecting [longitude, latitude]
+    } catch (parseError) {
+      res.status(400);
+      throw new Error(
+        "Invalid location format. Expected JSON array [longitude, latitude]"
+      );
+    }
 
-    const images = req.files.map((file) => ({
-      url: file.path,
-      public_id: file.filename,
-    }));
+    const images = req.files
+      ? req.files.map((file) => ({
+          url: file.path,
+          public_id: file.filename,
+        }))
+      : [];
 
     const request = await Request.create({
       title,
       description,
       category,
       urgency,
-      location: { type: "Point", coordinates },
-      address,
+      location: {
+        type: "Point",
+        coordinates,
+        address: address || "Location not specified",
+      },
       images,
       createdBy: req.user._id,
     });
@@ -25,8 +38,6 @@ const createRequest = async (req, res, next) => {
     res.status(201).json(request);
   } catch (error) {
     next(error);
-    const errorMessage = error.message || "Error creating request";
-    console.log(errorMessage);
   }
 };
 
@@ -39,34 +50,25 @@ const getNearbyRequests = async (req, res, next) => {
       throw new Error("Longitude and latitude are required");
     }
 
-    const maxDistance = (radius || 10) / 6378.1; // Convert km to radians for MongoDB
-
+    // Return both open and in-progress requests
+    // This allows users to see requests they're involved in even after accepting offers
     const filter = {
-      location: {
-        $nearSphere: {
-          $geometry: {
-            type: "Point",
-            coordinates: [parseFloat(longitude), parseFloat(latitude)],
-          },
-          $maxDistance: maxDistance * 1000, // in meters
-        },
-      },
-      status: "open",
+      status: { $in: ["open", "in-progress"] },
     };
 
     if (category) {
       filter.category = category;
     }
 
-    const requests = await Request.find(filter).populate(
-      "createdBy",
-      "name profilePhoto"
-    );
+    const requests = await Request.find(filter)
+      .populate("createdBy", "name profilePhoto")
+      .limit(50) // Limit results for performance
+      .sort({ createdAt: -1 }); // Sort by newest first
+
     res.status(200).json(requests);
   } catch (error) {
+    console.error("Error in getNearbyRequests:", error);
     next(error);
-    const errorMessage = error.message || "Error fetching nearby requests";
-    console.log(errorMessage);
   }
 };
 
@@ -85,7 +87,6 @@ const getRequestById = async (req, res, next) => {
   } catch (error) {
     next(error);
     const errorMessage = error.message || "Error fetching request by ID";
-    console.log(errorMessage);
   }
 };
 
@@ -113,7 +114,6 @@ const updateRequestStatus = async (req, res, next) => {
   } catch (error) {
     next(error);
     const errorMessage = error.message || "Error updating request status";
-    console.log(errorMessage);
   }
 };
 
@@ -137,14 +137,13 @@ const deleteRequest = async (req, res, next) => {
   } catch (error) {
     next(error);
     const errorMessage = error.message || "Error deleting request";
-    console.log(errorMessage);
   }
 };
 
-export{
-    createRequest,
-    getNearbyRequests,
-    getRequestById,
-    updateRequestStatus,
-    deleteRequest,
-}
+export {
+  createRequest,
+  getNearbyRequests,
+  getRequestById,
+  updateRequestStatus as updateRequest,
+  deleteRequest,
+};
