@@ -1,15 +1,12 @@
 import express from 'express';
-import {
-    sendMessage,
-    getMessagesForConversation,
-} from '../controllers/messageController.js';
+import { getMessagesForConversation } from '../controllers/messageController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(protect);
 
-router.post('/', sendMessage);
+// We only need the GET route to fetch message history
 router.get('/:requestId/:otherUserId', getMessagesForConversation);
 
 export { router as messageRoutes };
