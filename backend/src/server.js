@@ -22,7 +22,7 @@ server.listen(PORT, () => {
   console.log(`🌐 Server running on: http://localhost:${PORT}`);
 
   // Check for missing environment variables
-  const requiredEnvVars = ["JWT_SECRET"];
+  const requiredEnvVars = ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"];
   const missingVars = requiredEnvVars.filter(
     (varName) => !process.env[varName]
   );
