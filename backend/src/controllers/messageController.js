@@ -1,12 +1,11 @@
-import Message from "../models/Message";
-import Request from "../models/Request";
+import { Message } from "../models/Message.js";
+import { Request } from "../models/Request.js";
+import { getIO } from "../config/socket.js";
 
-const sendMessage = async (req, res) => {
+const sendMessage = async (req, res, next) => {
   try {
     const { receiverId, requestId, content } = req.body;
 
-    // You might add validation here to ensure the sender and receiver
-    // are actually the requester and helper for the given request.
     const request = await Request.findById(requestId);
     if (!request) {
       res.status(404);
@@ -16,11 +15,11 @@ const sendMessage = async (req, res) => {
     if (
       !(
         req.user._id.equals(request.createdBy) &&
-        receiverId.equals(request.helper)
+        String(request.helper) === receiverId
       ) &&
       !(
         req.user._id.equals(request.helper) &&
-        receiverId.equals(request.createdBy)
+        String(request.createdBy) === receiverId
       )
     ) {
       res.status(403);
@@ -36,15 +35,15 @@ const sendMessage = async (req, res) => {
       content: content,
     });
 
+    getIO().to(receiverId).emit("receiveMessage", message);
+
     res.status(201).json(message);
   } catch (error) {
     next(error);
-    const errorMessage = error.message || "Error while sending message";
-    console.log(errorMessage);
   }
 };
 
-const getMessagesForConversation = async (req, res) => {
+const getMessagesForConversation = async (req, res, next) => {
   try {
     const { requestId, otherUserId } = req.params;
     const loggedInUserId = req.user._id;
@@ -63,7 +62,4 @@ const getMessagesForConversation = async (req, res) => {
   }
 };
 
-export { 
-    sendMessage, 
-    getMessagesForConversation 
-};
+export { sendMessage, getMessagesForConversation };
