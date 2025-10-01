@@ -50,7 +50,7 @@ router.get(
     });
 
     // Redirect to the frontend dashboard
-    res.redirect("http://localhost:3000/dashboard");
+    res.redirect("https://neighborhood-help-board.vercel.app/dashboard");
   }
 );
 

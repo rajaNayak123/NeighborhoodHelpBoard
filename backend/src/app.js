@@ -30,6 +30,7 @@ app.use(
       // Allow specific ports for Vite development
       const allowedOrigins = [
         "http://localhost:5173",
+        "https://neighborhood-help-board.vercel.app/"
       ];
 
       if (allowedOrigins.includes(origin)) {
