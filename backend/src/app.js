@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import passport from "passport";
+import cookieParser from "cookie-parser"; // Import cookie-parser
 import { errorHandler } from "./middleware/errorHandler.js";
 import { configurePassport } from "./config/passport.js";
 
@@ -44,6 +45,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Use cookie-parser
 
 // Passport Middleware
 app.use(passport.initialize());
