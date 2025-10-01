@@ -7,9 +7,9 @@ const protect = async (req, res, next) => {
   let token;
 
   // We'll read the JWT from the httpOnly cookie
-  if (req.headers.cookie && req.headers.cookie.includes("accessToken=")) {
+  if (req.cookies && req.cookies.accessToken) {
     try {
-      token = req.headers.cookie.split("accessToken=")[1].split(";")[0];
+      token = req.cookies.accessToken;
 
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
