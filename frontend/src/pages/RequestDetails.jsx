@@ -26,26 +26,22 @@ const RequestDetails = () => {
   const [error, setError] = useState("");
   const [isOfferFormVisible, setIsOfferFormVisible] = useState(false);
   const [hasOffered, setHasOffered] = useState(false);
-  const [offerSuccess, setOfferSuccess] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const requestRes = await requestService.getRequestById(id);
-      setRequest(requestRes.data);
-
-      // Fetch offers regardless of role to check if user has already offered
       const offersRes = await offerService.getOffersForRequest(id);
 
-      if (user?._id === requestRes.data.createdBy._id) {
-        const offersRes = await offerService.getOffersForRequest(id);
-        setOffers(offersRes.data);
+      setRequest(requestRes.data);
+      setOffers(offersRes.data);
+
+      if (user) {
+        const userOffer = offersRes.data.find(
+          (offer) => offer.offeredBy._id === user._id
+        );
+        setHasOffered(!!userOffer);
       }
-      // Check if the current user (who is not the requester) has an existing offer
-      const userOffer = offersRes.data.find(
-        (offer) => offer.offeredBy._id === user?._id
-      );
-      setHasOffered(!!userOffer);
     } catch (err) {
       setError("Failed to load request details.");
     } finally {
@@ -60,7 +56,7 @@ const RequestDetails = () => {
   const handleRespondToOffer = async (offerId, status) => {
     try {
       await offerService.respondToOffer(offerId, status);
-      fetchData(); // Refresh all data after responding
+      fetchData(); // Refresh all data
     } catch (err) {
       alert("Failed to respond to offer.");
     }
@@ -76,6 +72,7 @@ const RequestDetails = () => {
     });
   };
 
+  // ... (getStatusColor and getUrgencyColor functions remain the same)
   const getStatusColor = (status) => {
     switch (status) {
       case "open":
@@ -104,6 +101,7 @@ const RequestDetails = () => {
     }
   };
 
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -117,46 +115,46 @@ const RequestDetails = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <FiAlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Error Loading Request
-          </h2>
-          <p className="text-red-600 mb-4">{error}</p>
-          <Link to="/dashboard" className="btn btn-primary">
-            Back to Dashboard
-          </Link>
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+                <FiAlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Error Loading Request
+                </h2>
+                <p className="text-red-600 mb-4">{error}</p>
+                <Link to="/dashboard" className="btn btn-primary">
+                    Back to Dashboard
+                </Link>
+            </div>
         </div>
-      </div>
     );
-  }
+}
 
   if (!request) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <FiAlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Request Not Found
-          </h2>
-          <p className="text-gray-600 mb-4">
-            The request you're looking for doesn't exist.
-          </p>
-          <Link to="/dashboard" className="btn btn-primary">
-            Back to Dashboard
-          </Link>
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+                <FiAlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    Request Not Found
+                </h2>
+                <p className="text-gray-600 mb-4">
+                    The request you're looking for doesn't exist.
+                </p>
+                <Link to="/dashboard" className="btn btn-primary">
+                    Back to Dashboard
+                </Link>
+            </div>
         </div>
-      </div>
     );
-  }
+}
 
   const isRequester = user?._id === request.createdBy._id;
+  const isHelper = user?._id === request.helper?._id;
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <Link
             to="/dashboard"
@@ -168,9 +166,7 @@ const RequestDetails = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Details & Map */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Request Header */}
             <div className="card p-8">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6">
                 <div className="flex-1">
@@ -216,7 +212,6 @@ const RequestDetails = () => {
                 </div>
               </div>
 
-              {/* Image */}
               <div className="w-full h-80 bg-gray-200 rounded-xl mb-6 overflow-hidden">
                 {request.images && request.images[0] ? (
                   <img
@@ -231,7 +226,6 @@ const RequestDetails = () => {
                 )}
               </div>
 
-              {/* Description */}
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Description
@@ -242,7 +236,6 @@ const RequestDetails = () => {
               </div>
             </div>
 
-            {/* Location */}
             <div className="card p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
                 <FiMapPin className="w-6 h-6 mr-2 text-blue-600" />
@@ -255,7 +248,6 @@ const RequestDetails = () => {
             </div>
           </div>
 
-          {/* Right Column: Status & Offers */}
           <div className="lg:col-span-1">
             <div className="card p-6 sticky top-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -274,52 +266,21 @@ const RequestDetails = () => {
                   </span>
                 </div>
 
-                {request.status === "in-progress" && request.helper && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center mb-2">
-                      <FiCheckCircle className="w-5 h-5 text-blue-600 mr-2" />
-                      <span className="font-semibold text-blue-900">
-                        Helper Assigned
-                      </span>
-                    </div>
-                    <p className="text-blue-800">
-                      <span className="font-semibold">
-                        {request.helper.name}
-                      </span>{" "}
-                      is helping with this request
-                    </p>
-
-                    {/* Show Chat button only to requester and helper */}
-                    {(user._id === request.createdBy._id ||
-                      user._id === request.helper._id) && (
-                      <Link
-                        to="/chat"
-                        state={{ request: request }}
-                        className="btn btn-success w-full mt-4 flex items-center justify-center space-x-2"
-                      >
-                        <FiMessageCircle className="w-4 h-4" />
-                        <span>Go to Chat</span>
-                      </Link>
-                    )}
-                  </div>
+                {isRequester && request.status === "open" && (
+                    <OfferList offers={offers} onRespond={handleRespondToOffer} />
                 )}
 
-                {isRequester ? (
-                  <OfferList offers={offers} onRespond={handleRespondToOffer} />
-                ) : (
-                  request.status === "open" &&
-                  !hasOffered && (
+                {!isRequester && !isHelper && request.status === "open" && !hasOffered && (
                     <button
-                      onClick={() => setIsOfferFormVisible(true)}
-                      className="btn btn-primary w-full flex items-center justify-center space-x-2"
+                        onClick={() => setIsOfferFormVisible(true)}
+                        className="btn btn-primary w-full flex items-center justify-center space-x-2"
                     >
-                      <FiCheckCircle className="w-4 h-4" />
-                      <span>Offer to Help</span>
+                        <FiCheckCircle className="w-4 h-4" />
+                        <span>Offer to Help</span>
                     </button>
-                  )
                 )}
 
-                {hasOffered && !isRequester && (
+                {hasOffered && !isRequester && request.status === 'open' && (
                   <div className="p-4 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center">
                       <FiCheckCircle className="w-5 h-5 text-green-600 mr-2" />
@@ -328,23 +289,34 @@ const RequestDetails = () => {
                       </span>
                     </div>
                     <p className="text-green-800 text-sm mt-1">
-                      The requester will review your offer and get back to you.
+                      The requester will review your offer.
                     </p>
                   </div>
+                )}
+
+
+                {(isRequester || isHelper) && request.status === 'in-progress' && (
+                    <Link
+                        to="/chat"
+                        state={{ request: request }}
+                        className="btn btn-success w-full mt-4 flex items-center justify-center space-x-2"
+                      >
+                        <FiMessageCircle className="w-4 h-4" />
+                        <span>Go to Chat</span>
+                    </Link>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Offer Form Modal */}
         {isOfferFormVisible && (
           <OfferForm
             requestId={id}
             onClose={() => setIsOfferFormVisible(false)}
             onSubmitSuccess={() => {
-              setHasOffered(true);
-              setOfferSuccess(true);
+              setIsOfferFormVisible(false);
+              fetchData();
             }}
           />
         )}
