@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/userModel.js";
+import { User } from "../models/User.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -7,7 +7,7 @@ const protect = async (req, res, next) => {
   let token;
 
   // We'll read the JWT from the httpOnly cookie
-  if (req.headers.cookie && req.headers.cookie.startsWith("accessToken=")) {
+  if (req.headers.cookie && req.headers.cookie.includes("accessToken=")) {
     try {
       token = req.headers.cookie.split("accessToken=")[1].split(";")[0];
 
@@ -26,9 +26,7 @@ const protect = async (req, res, next) => {
       res.status(401);
       throw new Error("Not authorized, token failed");
     }
-  }
-
-  if (!token) {
+  } else {
     res.status(401);
     throw new Error("Not authorized, no token");
   }
